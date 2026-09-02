@@ -72,19 +72,16 @@ export async function POST(req: NextRequest) {
       ];
     }
 
-    // Sunucu tarafında Gemini çağrısını gerçekleştir (model fallback desteğiyle)
     const preferredModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     const candidateModels = [
       preferredModel,
       'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
       'gemini-2.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-latest',
+      'gemini-2.0-flash-lite',
     ].filter((v, i, a) => a.indexOf(v) === i);
 
     let replyText = '';
-    let lastError: Error | null = null;
+    const attemptErrors: Record<string, string> = {};
 
     for (const modelToTry of candidateModels) {
       try {
@@ -101,13 +98,21 @@ export async function POST(req: NextRequest) {
           break;
         }
       } catch (tryErr: unknown) {
-        lastError = tryErr as Error;
-        console.warn(`Model ${modelToTry} failed, trying next fallback...`, tryErr);
+        const err = tryErr as Error;
+        attemptErrors[modelToTry] = err.message;
+        console.warn(`Model ${modelToTry} failed:`, err.message);
       }
     }
 
     if (!replyText) {
-      throw lastError || new Error('Yapay zeka yanıt üretemedi.');
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Modeller denenirken hata oluştu: ' + JSON.stringify(attemptErrors),
+          text: '🤖 Bip bip... Devrelerimde küçük bir karışıklık oldu ama hiç merak etme! Bana tekrar bir soru sormayı dener misin? 🌟',
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
