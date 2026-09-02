@@ -72,17 +72,38 @@ export async function POST(req: NextRequest) {
       ];
     }
 
-    // Sunucu tarafında Gemini çağrısını gerçekleştir
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-      contents: contentsPayload,
-      config: {
-        systemInstruction: ROBI_SYSTEM_INSTRUCTION,
-        temperature: 0.7,
-      },
-    });
+    // Sunucu tarafında Gemini çağrısını gerçekleştir (model fallback desteğiyle)
+    const preferredModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const candidateModels = [preferredModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(
+      (v, i, a) => a.indexOf(v) === i
+    );
 
-    const replyText = response.text || '🤖 Bip bup! Bu harika bir soru, gel birlikte düşünelim!';
+    let replyText = '';
+    let lastError: Error | null = null;
+
+    for (const modelToTry of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelToTry,
+          contents: contentsPayload,
+          config: {
+            systemInstruction: ROBI_SYSTEM_INSTRUCTION,
+            temperature: 0.7,
+          },
+        });
+        if (response.text) {
+          replyText = response.text;
+          break;
+        }
+      } catch (tryErr: unknown) {
+        lastError = tryErr as Error;
+        console.warn(`Model ${modelToTry} failed, trying next fallback...`, tryErr);
+      }
+    }
+
+    if (!replyText) {
+      throw lastError || new Error('Yapay zeka yanıt üretemedi.');
+    }
 
     return NextResponse.json({
       success: true,
