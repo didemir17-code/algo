@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Star, Flame, Volume2, VolumeX, Award, BookOpen, Layers } from 'lucide-react';
+import { Sparkles, Star, Flame, Volume2, VolumeX, Award, BookOpen, Layers, Bot } from 'lucide-react';
 import { sound } from '../lib/sound';
 
 interface HeaderProps {
@@ -11,8 +11,8 @@ interface HeaderProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   onOpenSummary: () => void;
-  activeTab: 'learn' | 'play' | 'sandbox';
-  setActiveTab: (tab: 'learn' | 'play' | 'sandbox') => void;
+  activeTab: 'learn' | 'play' | 'sandbox' | 'chat';
+  setActiveTab: (tab: 'learn' | 'play' | 'sandbox' | 'chat') => void;
   selectedGrade: 'all' | '1-2' | '3-4';
   setSelectedGrade: (grade: 'all' | '1-2' | '3-4') => void;
 }
@@ -128,6 +128,22 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Layers className="w-4 h-4" />
             <span>Kendi Kodunu Yaz</span>
+          </button>
+
+          <button
+            id="tab-chat"
+            onClick={() => {
+              sound.playPop();
+              setActiveTab('chat');
+            }}
+            className={`px-3 sm:px-4 py-2 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'chat'
+                ? 'bg-white text-[#45AAF2] shadow-[0_2px_0_0_#2d98da] scale-102'
+                : 'text-white hover:bg-white/15'
+            }`}
+          >
+            <Bot className="w-4 h-4" />
+            <span>Robi ile Sohbet 🤖</span>
           </button>
         </nav>
 

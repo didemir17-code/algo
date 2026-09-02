@@ -8,6 +8,7 @@ import { LevelSelector } from '../components/LevelSelector';
 import { AlgorithmBoard } from '../components/AlgorithmBoard';
 import { ConceptCards } from '../components/ConceptCards';
 import { FreeSandbox } from '../components/FreeSandbox';
+import { RobiAIChat } from '../components/RobiAIChat';
 import { SummaryCertificateModal } from '../components/SummaryCertificateModal';
 import { sound } from '../lib/sound';
 
@@ -16,8 +17,8 @@ export default function HomePage() {
   const [levelsList, setLevelsList] = useState<Level[]>(LEVELS);
   const [currentLevelId, setCurrentLevelId] = useState<string>(LEVELS[0].id);
 
-  // Active view tab: 'play' | 'learn' | 'sandbox'
-  const [activeTab, setActiveTab] = useState<'play' | 'learn' | 'sandbox'>('play');
+  // Active view tab: 'play' | 'learn' | 'sandbox' | 'chat'
+  const [activeTab, setActiveTab] = useState<'play' | 'learn' | 'sandbox' | 'chat'>('play');
 
   // Filters
   const [selectedGrade, setSelectedGrade] = useState<'all' | '1-2' | '3-4'>('all');
@@ -208,7 +209,29 @@ export default function HomePage() {
         )}
 
         {activeTab === 'sandbox' && <FreeSandbox />}
+
+        {activeTab === 'chat' && <RobiAIChat />}
       </main>
+
+      {/* Floating Robot Robi Quick Access Button (when not on chat tab) */}
+      {activeTab !== 'chat' && (
+        <button
+          id="btn-floating-robi-chat"
+          onClick={() => {
+            sound.playStar();
+            setActiveTab('chat');
+          }}
+          className="fixed bottom-16 right-4 z-40 bg-[#45AAF2] hover:bg-[#2d98da] text-white p-3 sm:px-4 sm:py-3 rounded-full sm:rounded-2xl shadow-[0_4px_0_0_#2d98da] flex items-center gap-2 font-black text-xs sm:text-sm transition-all transform hover:scale-105 cursor-pointer border-2 border-white/80 group animate-in fade-in"
+          title="Robot Robi'ye Soru Sor!"
+        >
+          <span className="text-xl sm:text-2xl group-hover:rotate-12 transition-transform">🤖</span>
+          <span className="hidden sm:inline">Robi&apos;ye Soru Sor!</span>
+          <span className="flex h-2.5 w-2.5 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#55E6C1] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#55E6C1]"></span>
+          </span>
+        </button>
+      )}
 
       {/* Persistent Bottom Encouragement Bar */}
       <footer className="bg-white border-t-4 border-[#DFE6E9] py-3.5 px-4 text-center text-xs text-[#636E72] shadow-sm">
