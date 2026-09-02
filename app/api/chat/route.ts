@@ -73,10 +73,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Sunucu tarafında Gemini çağrısını gerçekleştir (model fallback desteğiyle)
-    const preferredModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const candidateModels = [preferredModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(
-      (v, i, a) => a.indexOf(v) === i
-    );
+    const preferredModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const candidateModels = [
+      preferredModel,
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro-latest',
+    ].filter((v, i, a) => a.indexOf(v) === i);
 
     let replyText = '';
     let lastError: Error | null = null;
