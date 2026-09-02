@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { 
-  CheckCircle2, 
   Sparkles, 
   Star, 
   Bot, 
@@ -16,8 +15,9 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
+  X,
   Layers,
-  Award
+  CheckCircle2
 } from 'lucide-react';
 import { Level, CategoryType, UserStats } from '../lib/types';
 import { sound } from '../lib/sound';
@@ -33,13 +33,85 @@ interface LevelSelectorProps {
   onGenerateEndlessLevel: () => void;
 }
 
-const CATEGORIES = [
-  { id: 'all' as const, label: 'Tüm Görevler', icon: Sparkles, color: 'bg-[#FF7675]', text: 'text-[#FF7675]', border: 'border-[#FF7675]' },
-  { id: 'sirali' as const, label: 'Sıralama (Adım Adım)', icon: ListOrdered, color: 'bg-[#FD9644]', text: 'text-[#FD9644]', border: 'border-[#FD9644]' },
-  { id: 'dongu' as const, label: 'Döngüler (Tekrar)', icon: Repeat, color: 'bg-[#A55EEA]', text: 'text-[#A55EEA]', border: 'border-[#A55EEA]' },
-  { id: 'kosul' as const, label: 'Koşullar (Eğer/İse)', icon: GitFork, color: 'bg-[#45AAF2]', text: 'text-[#45AAF2]', border: 'border-[#45AAF2]' },
-  { id: 'robotik' as const, label: 'Robotik Labirent', icon: Bot, color: 'bg-[#55E6C1]', text: 'text-[#10ac84]', border: 'border-[#55E6C1]' },
-  { id: 'hata_ayiklama' as const, label: 'Böcek Avı (Debug)', icon: Bug, color: 'bg-[#FF7675]', text: 'text-[#FF7675]', border: 'border-[#FF7675]' },
+interface CategoryConfig {
+  id: 'all' | CategoryType;
+  label: string;
+  shortLabel: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  activeBg: string;
+  activeBorder: string;
+  textColor: string;
+  desc: string;
+}
+
+const CATEGORIES: CategoryConfig[] = [
+  { 
+    id: 'all', 
+    label: 'Tüm Görevler', 
+    shortLabel: 'Tümü',
+    icon: Sparkles, 
+    color: 'bg-[#FF7675]', 
+    activeBg: 'bg-[#FF7675]', 
+    activeBorder: 'border-[#D63031]',
+    textColor: 'text-[#FF7675]',
+    desc: 'Tüm algoritma ve kodlama maceraları' 
+  },
+  { 
+    id: 'sirali', 
+    label: 'Sıralama (Adım Adım)', 
+    shortLabel: 'Sıralama',
+    icon: ListOrdered, 
+    color: 'bg-[#FD9644]', 
+    activeBg: 'bg-[#FD9644]', 
+    activeBorder: 'border-[#fa8231]',
+    textColor: 'text-[#FD9644]',
+    desc: 'Adımları doğru sırayla dizme görevleri' 
+  },
+  { 
+    id: 'dongu', 
+    label: 'Döngüler (Tekrar)', 
+    shortLabel: 'Döngüler',
+    icon: Repeat, 
+    color: 'bg-[#A55EEA]', 
+    activeBg: 'bg-[#A55EEA]', 
+    activeBorder: 'border-[#8854d0]',
+    textColor: 'text-[#A55EEA]',
+    desc: 'Tekrar eden eylemleri döngüyle çözme görevleri' 
+  },
+  { 
+    id: 'kosul', 
+    label: 'Koşullar (Eğer/İse)', 
+    shortLabel: 'Koşullar',
+    icon: GitFork, 
+    color: 'bg-[#45AAF2]', 
+    activeBg: 'bg-[#45AAF2]', 
+    activeBorder: 'border-[#2d98da]',
+    textColor: 'text-[#45AAF2]',
+    desc: 'Şartlara ve duruma göre doğru karar verme görevleri' 
+  },
+  { 
+    id: 'robotik', 
+    label: 'Robotik Labirent', 
+    shortLabel: 'Robotik',
+    icon: Bot, 
+    color: 'bg-[#55E6C1]', 
+    activeBg: 'bg-[#20bf6b]', 
+    activeBorder: 'border-[#26de81]',
+    textColor: 'text-[#10ac84]',
+    desc: 'Robot Robi’yi hedefe ulaştırma görevleri' 
+  },
+  { 
+    id: 'hata_ayiklama', 
+    label: 'Böcek Avı (Debug)', 
+    shortLabel: 'Böcek Avı',
+    icon: Bug, 
+    color: 'bg-[#EB3B5A]', 
+    activeBg: 'bg-[#EB3B5A]', 
+    activeBorder: 'border-[#fc5c65]',
+    textColor: 'text-[#EB3B5A]',
+    desc: 'Hatalı kodları bulup düzeltme görevleri' 
+  },
 ];
 
 export const LevelSelector: React.FC<LevelSelectorProps> = ({
@@ -52,35 +124,33 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
   userStats,
   onGenerateEndlessLevel,
 }) => {
-  // Açılır menü durumu (Varsayılan olarak kapalıdır, görev seçilince otomatik kapanır)
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Açık olan kategori menü başlığı ('all' | 'sirali' | 'dongu' | 'kosul' | 'robotik' | 'hata_ayiklama' | null)
+  const [openCategoryMenu, setOpenCategoryMenu] = useState<('all' | CategoryType) | null>(null);
 
-  // Aktif görevi ve index'ini bul
+  // Aktif görev
   const currentIdx = levels.findIndex((lvl) => lvl.id === currentLevelId);
   const currentLevel = levels[currentIdx] || levels[0];
   const isCurrentSolved = userStats.solvedLevelIds.includes(currentLevel.id);
 
-  // Filtrelenmiş görevler
-  const filteredLevels = levels.filter((lvl) => {
-    const matchGrade = selectedGrade === 'all' || lvl.gradeLevel === selectedGrade;
-    const matchCategory = selectedCategory === 'all' || lvl.category === selectedCategory;
-    return matchGrade && matchCategory;
-  });
-
-  const handleCategoryClick = (catId: 'all' | CategoryType) => {
+  // Kategori menü başlığına tıklandığında (Aç / Kapat)
+  const handleCategoryHeaderClick = (catId: 'all' | CategoryType) => {
     sound.playPop();
     setSelectedCategory(catId);
-    // Kategori butonuna tıklandığında menüyü aç
-    setIsMenuOpen(true);
+    if (openCategoryMenu === catId) {
+      setOpenCategoryMenu(null); // Aynı başlığa tekrar tıklarsa kapat
+    } else {
+      setOpenCategoryMenu(catId); // İlgili kategorinin menüsünü aç
+    }
   };
 
-  const handleLevelCardSelect = (levelId: string) => {
+  // Menüden bir görev seçildiğinde: görevi seç ve menüyü otomatik kapat!
+  const handleLevelSelect = (levelId: string) => {
     sound.playPop();
     onSelectLevel(levelId);
-    // Görev seçilince menüyü otomatik kapat ve alttaki oyunu göster!
-    setIsMenuOpen(false);
+    setOpenCategoryMenu(null); // Menü kapansın, alttaki görev alanı görünsün
   };
 
+  // Hızlı önceki / sonraki geçişleri
   const handlePrevLevel = () => {
     if (currentIdx > 0) {
       sound.playPop();
@@ -98,131 +168,95 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
     }
   };
 
-  const currentCategoryConfig = CATEGORIES.find((c) => c.id === currentLevel.category) || CATEGORIES[0];
-  const CurrentIcon = currentCategoryConfig.icon;
+  // Açık olan kategorinin görevleri
+  const currentOpenConfig = openCategoryMenu ? CATEGORIES.find((c) => c.id === openCategoryMenu) : null;
+  const levelsToShow = openCategoryMenu
+    ? levels.filter((lvl) => {
+        const matchGrade = selectedGrade === 'all' || lvl.gradeLevel === selectedGrade;
+        const matchCategory = openCategoryMenu === 'all' || lvl.category === openCategoryMenu;
+        return matchGrade && matchCategory;
+      })
+    : [];
+
+  const activeLevelCategoryConfig = CATEGORIES.find((c) => c.id === currentLevel.category) || CATEGORIES[0];
+  const ActiveCatIcon = activeLevelCategoryConfig.icon;
 
   return (
     <div className="max-w-7xl mx-auto py-2 px-3 sm:px-6 space-y-3">
-      {/* 1. Üst Ana Görev & Kategori Seçim Çubuğu (Her Zaman Görünür) */}
-      <div className="bg-white rounded-[28px] border-4 border-[#DFE6E9] shadow-[0_4px_0_0_#DFE6E9] p-3 sm:p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-        {/* Sol: Aktif Görev Başlığı ve Hızlı Geçiş Butonları */}
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#FFF9F0] border-3 border-[#DFE6E9] text-[#2D3436] flex items-center justify-center font-black text-base shrink-0 shadow-xs">
-            <span>{currentIdx + 1}</span>
-          </div>
+      {/* 1. Her Kategori İçin Ayrı Açılır Menü Başlıkları Çubuğu */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+        {CATEGORIES.map((cat) => {
+          const IconComp = cat.icon;
+          const isOpen = openCategoryMenu === cat.id;
+          const isCategoryOfCurrentLevel = currentLevel.category === cat.id || (cat.id === 'all');
+          
+          const filteredCount = cat.id === 'all'
+            ? levels.filter((lvl) => selectedGrade === 'all' || lvl.gradeLevel === selectedGrade).length
+            : levels.filter((lvl) => (selectedGrade === 'all' || lvl.gradeLevel === selectedGrade) && lvl.category === cat.id).length;
 
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-extrabold text-[#636E72]">Aktif Görev:</span>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black ${currentCategoryConfig.color} text-white`}>
-                <CurrentIcon className="w-3 h-3" />
-                <span>{currentCategoryConfig.label}</span>
+          return (
+            <button
+              key={cat.id}
+              id={`menu-header-${cat.id}`}
+              onClick={() => handleCategoryHeaderClick(cat.id)}
+              className={`px-3.5 py-2.5 rounded-2xl font-black text-xs whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 border-3 ${
+                isOpen
+                  ? `${cat.activeBg} text-white ${cat.activeBorder} shadow-[0_4px_0_0_rgba(0,0,0,0.2)] scale-102`
+                  : 'bg-white hover:bg-[#FFF9F0] text-[#2D3436] border-[#DFE6E9] shadow-[0_2px_0_0_#DFE6E9] hover:translate-y-[-1px]'
+              }`}
+              title={`${cat.label} görevlerini aç`}
+            >
+              <IconComp className={`w-4 h-4 ${isOpen ? 'text-white' : cat.textColor}`} />
+              <span>{cat.label}</span>
+              <span
+                className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                  isOpen ? 'bg-black/25 text-white' : 'bg-[#F1F2F6] text-[#636E72]'
+                }`}
+              >
+                {filteredCount}
               </span>
-              {isCurrentSolved && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FFEAA7] text-[#D35400] text-[10px] font-black border border-[#F1C40F]">
-                  <Star className="w-3 h-3 fill-[#FD9644] text-[#FD9644]" />
-                  <span>Tamamlandı</span>
-                </span>
+              {isOpen ? (
+                <ChevronUp className="w-3.5 h-3.5 text-white" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-[#636E72]" />
               )}
-            </div>
-            <h3 className="text-sm sm:text-base font-black text-[#2D3436] tracking-tight line-clamp-1">
-              {currentLevel.title}
-            </h3>
-          </div>
-        </div>
-
-        {/* Sağ: Hızlı Önceki/Sonraki Butonları ve Ana Açılır Menü Butonu */}
-        <div className="flex items-center gap-2 justify-between lg:justify-end">
-          {/* Hızlı Önceki / Sonraki */}
-          <div className="flex items-center gap-1 bg-[#FFF9F0] p-1 rounded-2xl border-2 border-[#DFE6E9]">
-            <button
-              onClick={handlePrevLevel}
-              disabled={currentIdx === 0}
-              className="p-1.5 rounded-xl hover:bg-white text-[#2D3436] disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer"
-              title="Önceki Görev"
-            >
-              <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-xs font-black px-1.5 text-[#636E72]">
-              {currentIdx + 1} / {levels.length}
-            </span>
-            <button
-              onClick={handleNextLevel}
-              className="p-1.5 rounded-xl hover:bg-white text-[#2D3436] transition cursor-pointer"
-              title="Sonraki Görev"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Açılır Menüyü Aç / Kapat Butonu */}
-          <button
-            id="btn-toggle-level-menu"
-            onClick={() => {
-              sound.playPop();
-              setIsMenuOpen(!isMenuOpen);
-            }}
-            className={`px-4 py-2.5 rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
-              isMenuOpen
-                ? 'bg-[#FF7675] text-white shadow-[0_3px_0_0_#D63031]'
-                : 'bg-[#55E6C1] hover:bg-[#26de81] text-white shadow-[0_3px_0_0_#26de81] hover:translate-y-[-1px]'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>{isMenuOpen ? 'Görev Menüsünü Kapat' : 'Görevleri Seç & Değiştir'}</span>
-            {isMenuOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-        </div>
+          );
+        })}
       </div>
 
-      {/* 2. Açılır Menü Gövdesi (Tüm Görevler, Sıralama, Döngüler, Koşullar, Robotik, Böcek Avı) */}
-      {isMenuOpen && (
+      {/* 2. Seçilen Kategoriye Ait Açılır Menü Gövdesi (Görev seçilince otomatik kapanır) */}
+      {openCategoryMenu && currentOpenConfig && (
         <div className="bg-white rounded-[32px] border-4 border-[#DFE6E9] shadow-[0_8px_0_0_#DFE6E9] p-4 sm:p-6 space-y-4 animate-in fade-in slide-in-from-top-3 duration-200">
-          {/* Kategori Sekmeleri (Açılır Menü İçinde) */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#636E72] flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-[#FD9644]" />
-                <span>Kategori Seç:</span>
-              </span>
-              <span className="text-[11px] font-bold text-[#636E72]">
-                Bir göreve tıkladığında menü otomatik kapanacaktır ✨
-              </span>
+          {/* Menü Başlığı ve Kapat Butonu */}
+          <div className="flex items-center justify-between pb-3 border-b-2 border-[#DFE6E9]">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-9 h-9 rounded-xl ${currentOpenConfig.color} text-white flex items-center justify-center text-lg shadow-xs`}>
+                <currentOpenConfig.icon className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm sm:text-base font-black text-[#2D3436]">
+                  {currentOpenConfig.label} Menüsü
+                </h4>
+                <p className="text-xs text-[#636E72] font-semibold">
+                  {currentOpenConfig.desc} • Bir göreve tıkladığınızda menü otomatik kapanır ✨
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
-              {CATEGORIES.map((cat) => {
-                const IconComponent = cat.icon;
-                const isSelected = selectedCategory === cat.id;
-                const count = cat.id === 'all' 
-                  ? levels.length 
-                  : levels.filter((l) => l.category === cat.id).length;
-
-                return (
-                  <button
-                    key={cat.id}
-                    id={`cat-${cat.id}`}
-                    onClick={() => handleCategoryClick(cat.id)}
-                    className={`px-3.5 py-2 rounded-2xl font-black text-xs whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-                      isSelected
-                        ? `${cat.color} text-white shadow-[0_3px_0_0_rgba(0,0,0,0.2)] scale-102`
-                        : 'bg-[#FFF9F0] hover:bg-white text-[#2D3436] border-2 border-[#DFE6E9]'
-                    }`}
-                  >
-                    <IconComponent className="w-3.5 h-3.5" />
-                    <span>{cat.label}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-black/20 text-white' : 'bg-white text-[#636E72]'}`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <button
+              onClick={() => setOpenCategoryMenu(null)}
+              className="px-3 py-1.5 rounded-xl bg-[#F1F2F6] hover:bg-[#DFE6E9] text-[#636E72] font-black text-xs flex items-center gap-1 cursor-pointer transition"
+              title="Menüyü Kapat"
+            >
+              <X className="w-4 h-4" />
+              <span>Kapat</span>
+            </button>
           </div>
 
-          {/* Görev Kartları Listesi (Grid) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 max-h-[420px] overflow-y-auto p-1">
-            {filteredLevels.map((lvl, index) => {
+          {/* Kategoriye Ait Görev Kartları Listesi */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 max-h-[380px] overflow-y-auto p-1">
+            {levelsToShow.map((lvl) => {
               const isCurrent = lvl.id === currentLevelId;
               const isSolved = userStats.solvedLevelIds.includes(lvl.id);
               const lvlNumber = levels.findIndex((l) => l.id === lvl.id) + 1;
@@ -231,10 +265,10 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                 <button
                   key={lvl.id}
                   id={`level-card-${lvl.id}`}
-                  onClick={() => handleLevelCardSelect(lvl.id)}
+                  onClick={() => handleLevelSelect(lvl.id)}
                   className={`p-3.5 rounded-[22px] border-3 text-left transition-all relative flex flex-col justify-between cursor-pointer group ${
                     isCurrent
-                      ? 'bg-white border-[#FF7675] shadow-[0_4px_0_0_#D63031] ring-2 ring-[#FF7675]/30'
+                      ? 'bg-white border-[#FF7675] shadow-[0_4px_0_0_#D63031] ring-2 ring-[#FF7675]/30 scale-102'
                       : isSolved
                       ? 'bg-[#F0FFF4] border-[#55E6C1] shadow-[0_3px_0_0_#26de81] hover:scale-102'
                       : 'bg-white border-[#DFE6E9] hover:border-[#45AAF2] hover:shadow-[0_3px_0_0_#2d98da] hover:scale-102'
@@ -242,11 +276,13 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center border-2 ${
-                        isCurrent 
-                          ? 'bg-[#FF7675] text-white border-[#D63031]' 
-                          : 'bg-[#FFF9F0] text-[#2D3436] border-[#DFE6E9]'
-                      }`}>
+                      <span
+                        className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center border-2 ${
+                          isCurrent
+                            ? 'bg-[#FF7675] text-white border-[#D63031]'
+                            : 'bg-[#FFF9F0] text-[#2D3436] border-[#DFE6E9]'
+                        }`}
+                      >
                         {lvlNumber}
                       </span>
 
@@ -265,9 +301,9 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                     </div>
 
                     <div>
-                      <h4 className="text-xs sm:text-sm font-black text-[#2D3436] line-clamp-1 group-hover:text-[#45AAF2] transition-colors">
+                      <h5 className="text-xs sm:text-sm font-black text-[#2D3436] line-clamp-1 group-hover:text-[#45AAF2] transition-colors">
                         {lvl.title}
-                      </h4>
+                      </h5>
                       <p className="text-[11px] text-[#636E72] line-clamp-2 mt-0.5 leading-snug">
                         {lvl.scenario}
                       </p>
@@ -279,7 +315,7 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                       {lvl.availableSteps.length} Komut Adımı
                     </span>
                     <span className="flex items-center gap-1 text-[#2D3436] font-black">
-                      {isCurrent ? 'Seçili' : isSolved ? 'Tekrar Oyna' : 'Başla'}
+                      {isCurrent ? 'Şu Anki' : isSolved ? 'Tekrar Oyna' : 'Başla'}
                       <Play className="w-3 h-3 fill-current text-[#FF7675]" />
                     </span>
                   </div>
@@ -287,13 +323,13 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
               );
             })}
 
-            {/* Sonsuz Seviye Ekle Butonu */}
+            {/* Sonsuz Seviye Ekle Kartı */}
             <button
               id="btn-generate-endless"
               onClick={() => {
                 sound.playStar();
                 onGenerateEndlessLevel();
-                setIsMenuOpen(false);
+                setOpenCategoryMenu(null);
               }}
               className="p-3.5 rounded-[22px] border-3 border-dashed border-[#FD9644] bg-[#FFF9F0] hover:bg-[#FFEAA7]/40 text-[#2D3436] transition-all flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer shadow-[0_3px_0_0_#fa8231] hover:scale-102 group"
             >
@@ -301,21 +337,67 @@ export const LevelSelector: React.FC<LevelSelectorProps> = ({
                 ✨
               </div>
               <div>
-                <h4 className="text-xs font-black text-[#2D3436]">
+                <h5 className="text-xs font-black text-[#2D3436]">
                   Yeni Görev Ekle
-                </h4>
+                </h5>
                 <p className="text-[10px] text-[#636E72] font-semibold">
-                  Sonsuz Seviye Üret
+                  Sonsuz Seviye Üret & Puan Kazan
                 </p>
               </div>
               <span className="text-[10px] font-black text-white bg-[#FD9644] px-3 py-0.5 rounded-full flex items-center gap-1">
                 <PlusCircle className="w-3 h-3" />
-                <span>Ekle & Başla</span>
+                <span>Ekle & Oyna</span>
               </span>
             </button>
           </div>
         </div>
       )}
+
+      {/* 3. Kompakt Aktif Görev Bilgi & Hızlı Gezinme Çubuğu */}
+      <div className="bg-white rounded-[24px] border-3 border-[#DFE6E9] shadow-[0_3px_0_0_#DFE6E9] px-4 py-2.5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="w-8 h-8 rounded-xl bg-[#FFF9F0] border-2 border-[#DFE6E9] font-black text-xs text-[#2D3436] flex items-center justify-center shrink-0">
+            {currentIdx + 1}
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black ${activeLevelCategoryConfig.color} text-white`}>
+              <ActiveCatIcon className="w-3 h-3" />
+              <span>{activeLevelCategoryConfig.shortLabel}</span>
+            </span>
+            <span className="text-xs sm:text-sm font-black text-[#2D3436]">
+              {currentLevel.title}
+            </span>
+            {isCurrentSolved && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FFEAA7] text-[#D35400] text-[10px] font-black border border-[#F1C40F]">
+                <Star className="w-3 h-3 fill-[#FD9644] text-[#FD9644]" />
+                <span>Tamamlandı</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Hızlı Önceki / Sonraki Butonları */}
+        <div className="flex items-center gap-1 bg-[#FFF9F0] p-1 rounded-xl border-2 border-[#DFE6E9] shrink-0">
+          <button
+            onClick={handlePrevLevel}
+            disabled={currentIdx === 0}
+            className="p-1 rounded-lg hover:bg-white text-[#2D3436] disabled:opacity-30 transition cursor-pointer"
+            title="Önceki Görev"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-[11px] font-black px-1 text-[#636E72]">
+            {currentIdx + 1} / {levels.length}
+          </span>
+          <button
+            onClick={handleNextLevel}
+            className="p-1 rounded-lg hover:bg-white text-[#2D3436] transition cursor-pointer"
+            title="Sonraki Görev"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
