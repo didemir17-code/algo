@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, withDbRetry } from '@/lib/prisma';
 import { getTokenFromRequest, verifyAuthToken } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -14,12 +14,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, user: null });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      include: {
-        progress: true,
-      },
-    });
+    const user = await withDbRetry(() =>
+      prisma.user.findUnique({
+        where: { id: payload.userId },
+        include: {
+          progress: true,
+        },
+      })
+    );
 
     if (!user) {
       return NextResponse.json({ success: true, user: null });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, withDbRetry } from '@/lib/prisma';
 import { hashPassword, createAuthToken, AUTH_COOKIE_CONFIG } from '@/lib/auth';
 import { INITIAL_BADGES } from '@/lib/data/levels';
 
@@ -32,15 +32,17 @@ export async function POST(req: NextRequest) {
 
     const cleanUsername = username.trim().toLowerCase();
 
-    // Check existing user
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: cleanUsername },
-          ...(email && typeof email === 'string' && email.trim() ? [{ email: email.trim().toLowerCase() }] : []),
-        ],
-      },
-    });
+    // Check existing user with retry
+    const existingUser = await withDbRetry(() =>
+      prisma.user.findFirst({
+        where: {
+          OR: [
+            { username: cleanUsername },
+            ...(email && typeof email === 'string' && email.trim() ? [{ email: email.trim().toLowerCase() }] : []),
+          ],
+        },
+      })
+    );
 
     if (existingUser) {
       return NextResponse.json(
@@ -52,32 +54,34 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user and initial progress in transaction
-    const newUser = await prisma.user.create({
-      data: {
-        username: cleanUsername,
-        name: name.trim(),
-        email: email && typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null,
-        password: hashedPassword,
-        grade: typeof grade === 'string' ? grade : 'all',
-        avatar: typeof avatar === 'string' ? avatar : '🤖',
-        progress: {
-          create: {
-            solvedLevelIds: [],
-            totalStars: 0,
-            streak: 0,
-            totalAttempts: 0,
-            firstTimeCorrect: 0,
-            badgesJson: JSON.stringify(INITIAL_BADGES),
-            currentGrade: typeof grade === 'string' ? grade : 'all',
-            currentCategory: 'all',
+    // Create user and initial progress in transaction with retry
+    const newUser = await withDbRetry(() =>
+      prisma.user.create({
+        data: {
+          username: cleanUsername,
+          name: name.trim(),
+          email: email && typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null,
+          password: hashedPassword,
+          grade: typeof grade === 'string' ? grade : 'all',
+          avatar: typeof avatar === 'string' ? avatar : '🤖',
+          progress: {
+            create: {
+              solvedLevelIds: [],
+              totalStars: 0,
+              streak: 0,
+              totalAttempts: 0,
+              firstTimeCorrect: 0,
+              badgesJson: JSON.stringify(INITIAL_BADGES),
+              currentGrade: typeof grade === 'string' ? grade : 'all',
+              currentCategory: 'all',
+            },
           },
         },
-      },
-      include: {
-        progress: true,
-      },
-    });
+        include: {
+          progress: true,
+        },
+      })
+    );
 
     // Create JWT
     const token = await createAuthToken({

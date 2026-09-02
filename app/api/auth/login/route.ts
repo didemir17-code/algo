@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, withDbRetry } from '@/lib/prisma';
 import { comparePassword, createAuthToken, AUTH_COOKIE_CONFIG } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -16,15 +16,17 @@ export async function POST(req: NextRequest) {
 
     const cleanInput = username.trim().toLowerCase();
 
-    // Find user by username or email
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ username: cleanInput }, { email: cleanInput }],
-      },
-      include: {
-        progress: true,
-      },
-    });
+    // Find user by username or email with retry
+    const user = await withDbRetry(() =>
+      prisma.user.findFirst({
+        where: {
+          OR: [{ username: cleanInput }, { email: cleanInput }],
+        },
+        include: {
+          progress: true,
+        },
+      })
+    );
 
     if (!user) {
       return NextResponse.json(

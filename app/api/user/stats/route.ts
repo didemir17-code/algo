@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, withDbRetry } from '@/lib/prisma';
 import { getTokenFromRequest, verifyAuthToken } from '@/lib/auth';
 
 export async function PUT(req: NextRequest) {
@@ -28,30 +28,32 @@ export async function PUT(req: NextRequest) {
 
     const badgesJson = JSON.stringify(badges);
 
-    const updatedProgress = await prisma.userProgress.upsert({
-      where: { userId: payload.userId },
-      update: {
-        solvedLevelIds: Array.isArray(solvedLevelIds) ? solvedLevelIds : [],
-        totalStars: typeof totalStars === 'number' ? totalStars : 0,
-        streak: typeof streak === 'number' ? streak : 0,
-        totalAttempts: typeof totalAttempts === 'number' ? totalAttempts : 0,
-        firstTimeCorrect: typeof firstTimeCorrect === 'number' ? firstTimeCorrect : 0,
-        badgesJson,
-        currentGrade: typeof currentGrade === 'string' ? currentGrade : 'all',
-        currentCategory: typeof currentCategory === 'string' ? currentCategory : 'all',
-      },
-      create: {
-        userId: payload.userId,
-        solvedLevelIds: Array.isArray(solvedLevelIds) ? solvedLevelIds : [],
-        totalStars: typeof totalStars === 'number' ? totalStars : 0,
-        streak: typeof streak === 'number' ? streak : 0,
-        totalAttempts: typeof totalAttempts === 'number' ? totalAttempts : 0,
-        firstTimeCorrect: typeof firstTimeCorrect === 'number' ? firstTimeCorrect : 0,
-        badgesJson,
-        currentGrade: typeof currentGrade === 'string' ? currentGrade : 'all',
-        currentCategory: typeof currentCategory === 'string' ? currentCategory : 'all',
-      },
-    });
+    const updatedProgress = await withDbRetry(() =>
+      prisma.userProgress.upsert({
+        where: { userId: payload.userId },
+        update: {
+          solvedLevelIds: Array.isArray(solvedLevelIds) ? solvedLevelIds : [],
+          totalStars: typeof totalStars === 'number' ? totalStars : 0,
+          streak: typeof streak === 'number' ? streak : 0,
+          totalAttempts: typeof totalAttempts === 'number' ? totalAttempts : 0,
+          firstTimeCorrect: typeof firstTimeCorrect === 'number' ? firstTimeCorrect : 0,
+          badgesJson,
+          currentGrade: typeof currentGrade === 'string' ? currentGrade : 'all',
+          currentCategory: typeof currentCategory === 'string' ? currentCategory : 'all',
+        },
+        create: {
+          userId: payload.userId,
+          solvedLevelIds: Array.isArray(solvedLevelIds) ? solvedLevelIds : [],
+          totalStars: typeof totalStars === 'number' ? totalStars : 0,
+          streak: typeof streak === 'number' ? streak : 0,
+          totalAttempts: typeof totalAttempts === 'number' ? totalAttempts : 0,
+          firstTimeCorrect: typeof firstTimeCorrect === 'number' ? firstTimeCorrect : 0,
+          badgesJson,
+          currentGrade: typeof currentGrade === 'string' ? currentGrade : 'all',
+          currentCategory: typeof currentCategory === 'string' ? currentCategory : 'all',
+        },
+      })
+    );
 
     return NextResponse.json({
       success: true,
