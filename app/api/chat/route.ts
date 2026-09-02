@@ -78,8 +78,6 @@ export async function POST(req: NextRequest) {
       'gemini-2.5-flash',
       'gemini-2.5-flash-lite',
       'gemini-2.5-pro',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
     ].filter((v, i, a) => a.indexOf(v) === i);
 
     let replyText = '';
