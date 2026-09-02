@@ -1,5 +1,7 @@
-import type {Metadata} from 'next';
-import './globals.css'; // Global styles
+import type { Metadata } from 'next';
+import './globals.css';
+import { AuthProvider } from '@/context/AuthContext';
+import { AuthModal } from '@/components/AuthModal';
 
 export const metadata: Metadata = {
   title: 'Kodlama Macerası: İlkokul Algoritma Atölyesi',
@@ -16,10 +18,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({children}: {children: React.ReactNode}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body suppressHydrationWarning>{children}</body>
+    <html lang="tr">
+      <body suppressHydrationWarning>
+        <AuthProvider>
+          {children}
+          <AuthModal />
+        </AuthProvider>
+      </body>
     </html>
   );
 }

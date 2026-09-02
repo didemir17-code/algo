@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  name      String
+  email     String?  @unique
+  password  String
+  grade     String   @default("all")
+  avatar    String   @default("🤖")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  progress  UserProgress?
+
+  @@map("users")
+}
+
+model UserProgress {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  solvedLevelIds   String[] @default([])
+  totalStars       Int      @default(0)
+  streak           Int      @default(0)
+  totalAttempts    Int      @default(0)
+  firstTimeCorrect Int      @default(0)
+  badgesJson       String   @default("[]")
+  currentGrade     String   @default("all")
+  currentCategory  String   @default("all")
+  updatedAt        DateTime @updatedAt
+
+  @@map("user_progress")
+}

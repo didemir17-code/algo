@@ -15,15 +15,16 @@ Sen "Robot Robi", ilkokul 1-4. sınıf (7-10 yaş) öğrencilerine kodlama, algo
 
 export async function POST(req: NextRequest) {
   try {
+    // API anahtarı kesinlikle sunucu tarafındaki process.env üzerinden okunur (NEXT_PUBLIC_ kullanılmaz)
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // Check if API key is configured
+    // API anahtarı tanımlanmamışsa istemciye bilgilendirici ve güvenli bir mesaj dön
     if (!apiKey) {
       return NextResponse.json(
         {
           success: false,
-          error: 'GEMINI_API_KEY bulunamadı. Lütfen Ayarlar > Secrets bölümünden GEMINI_API_KEY tanımlayınız.',
-          text: '🤖 Bip bup! Merhaba minik kodlayıcı! Benimle canlı konuşabilmek için Gemini API anahtarının tanımlı olması gerekiyor. Öğretmeninle veya yöneticinle görüşüp Settings > Secrets panelinden GEMINI_API_KEY anahtarını ekletebilirsin! 🚀',
+          error: 'GEMINI_API_KEY bulunamadı. Lütfen .env.local dosyasına GEMINI_API_KEY tanımlayınız.',
+          text: '🤖 Bip bup! Merhaba minik kodlayıcı! Benimle canlı konuşabilmek için sunucu tarafında GEMINI_API_KEY anahtarının tanımlı olması gerekiyor. Lütfen .env.local dosyana GEMINI_API_KEY anahtarını ekle! 🚀',
         },
         { status: 200 }
       );
@@ -32,36 +33,34 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { message, messages, prompt } = body;
 
-    const userMessage = message || prompt || (Array.isArray(messages) && messages.length > 0 ? messages[messages.length - 1]?.content : '');
+    const userMessage =
+      message ||
+      prompt ||
+      (Array.isArray(messages) && messages.length > 0 ? messages[messages.length - 1]?.content : '');
 
     if (!userMessage || typeof userMessage !== 'string' || userMessage.trim().length === 0) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Geçersiz mesaj içeriği.',
+          error: 'Geçersiz veya boş mesaj içeriği.',
         },
         { status: 400 }
       );
     }
 
-    // Initialize the modern @google/genai SDK on the server side only
+    // Google Gen AI SDK'sı yalnızca sunucu tarafında başlatılır
     const ai = new GoogleGenAI({
       apiKey: apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
     });
 
-    // Format chat history if provided
+    // Sohbet geçmişini formatla
     let contentsPayload: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
     if (Array.isArray(messages) && messages.length > 0) {
       contentsPayload = messages
         .filter((m: { content?: string }) => m && typeof m.content === 'string' && m.content.trim().length > 0)
         .map((m: { role?: string; content: string }) => ({
-          role: m.role === 'user' ? 'user' : 'model',
+          role: m.role === 'assistant' || m.role === 'model' ? ('model' as const) : ('user' as const),
           parts: [{ text: m.content }],
         }));
     } else {
@@ -73,9 +72,9 @@ export async function POST(req: NextRequest) {
       ];
     }
 
-    // Call Gemini 3.7 Flash server-side
+    // Sunucu tarafında Gemini çağrısını gerçekleştir
     const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       contents: contentsPayload,
       config: {
         systemInstruction: ROBI_SYSTEM_INSTRUCTION,

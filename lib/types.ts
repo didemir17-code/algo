@@ -106,3 +106,14 @@ export interface VerificationResult {
   mistakeExplanation?: string;
   analysis: Level['pedagogicalAnalysis'];
 }
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  email?: string | null;
+  grade: string;
+  avatar: string;
+  stats?: UserStats | null;
+}
+

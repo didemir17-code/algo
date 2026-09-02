@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import { Sparkles, Star, Flame, Volume2, VolumeX, Award, BookOpen, Layers, Bot } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Star, Flame, Volume2, VolumeX, Award, BookOpen, Layers, Bot, User, LogOut, CloudCheck, ChevronDown } from 'lucide-react';
 import { sound } from '../lib/sound';
+import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   totalStars: number;
@@ -29,6 +30,9 @@ export const Header: React.FC<HeaderProps> = ({
   selectedGrade,
   setSelectedGrade,
 }) => {
+  const { user, openAuthModal, logout } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
   return (
     <header className="bg-[#FF7675] sticky top-0 z-40 px-3 sm:px-8 py-3.5 transition-all shadow-[0_4px_0_0_#D63031]">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
@@ -55,6 +59,27 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Mobile Right Controls */}
           <div className="flex md:hidden items-center gap-2">
+            {/* Auth Button for Mobile */}
+            {user ? (
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="w-9 h-9 rounded-xl bg-white/20 border border-white/40 flex items-center justify-center text-lg cursor-pointer"
+                title={user.name}
+              >
+                <span>{user.avatar || '🤖'}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  sound.playPop();
+                  openAuthModal('login');
+                }}
+                className="px-2.5 py-1.5 bg-white text-[#FF7675] font-black text-xs rounded-xl shadow-xs cursor-pointer"
+              >
+                Giriş
+              </button>
+            )}
+
             <button
               id="btn-sound-toggle-mobile"
               onClick={() => {
@@ -147,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </nav>
 
-        {/* Stats, Grade Filter & Actions (Desktop) */}
+        {/* Stats, Grade Filter, Auth & Actions (Desktop) */}
         <div className="hidden md:flex items-center gap-3">
           {/* Grade Selector Pill */}
           <div className="flex items-center bg-black/15 border border-white/20 rounded-xl p-0.5 text-xs font-bold text-white">
@@ -225,8 +250,64 @@ export const Header: React.FC<HeaderProps> = ({
             title="Dersimi bitir, rozetlerimi ve analiz karnemi göster!"
           >
             <Award className="w-4 h-4" />
-            <span>Karnem & Özet</span>
+            <span>Karnem</span>
           </button>
+
+          {/* Auth Button or User Profile Dropdown */}
+          {user ? (
+            <div className="relative">
+              <button
+                id="btn-user-profile"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="px-3 py-1.5 bg-white text-[#2D3436] rounded-2xl shadow-[0_3px_0_0_#DFE6E9] hover:bg-[#FFF9F0] transition-all flex items-center gap-2 cursor-pointer border-2 border-white/80"
+              >
+                <span className="text-xl">{user.avatar || '🤖'}</span>
+                <span className="font-black text-xs">{user.name}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#636E72]" />
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl border-3 border-[#DFE6E9] shadow-xl p-2 z-50 animate-in fade-in zoom-in-95">
+                  <div className="p-2 border-b border-[#DFE6E9]">
+                    <div className="text-xs font-black text-[#2D3436] flex items-center gap-1.5">
+                      <span>{user.avatar || '🤖'}</span>
+                      <span>{user.name}</span>
+                    </div>
+                    <div className="text-[11px] text-[#636E72] font-semibold">
+                      @{user.username} • {user.grade === 'all' ? 'Tüm Sınıflar' : `${user.grade}. Sınıf`}
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] font-black text-[#10ac84] bg-[#55E6C1]/20 px-2 py-0.5 rounded-lg">
+                      <CloudCheck className="w-3.5 h-3.5" />
+                      <span>İlerleme Bulutta Kayıtlı</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      logout();
+                    }}
+                    className="w-full mt-1 px-3 py-2 text-xs font-black text-[#FF7675] hover:bg-[#FF7675]/10 rounded-xl flex items-center gap-2 transition cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Çıkış Yap</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              id="btn-header-login"
+              onClick={() => {
+                sound.playPop();
+                openAuthModal('login');
+              }}
+              className="px-4 py-2 bg-white hover:bg-[#FFF9F0] text-[#FF7675] font-black text-sm rounded-2xl shadow-[0_3px_0_0_#e84118] transition-all transform hover:scale-103 flex items-center gap-1.5 cursor-pointer"
+            >
+              <User className="w-4 h-4" />
+              <span>Giriş Yap</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

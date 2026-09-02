@@ -11,8 +11,11 @@ import { FreeSandbox } from '../components/FreeSandbox';
 import { RobiAIChat } from '../components/RobiAIChat';
 import { SummaryCertificateModal } from '../components/SummaryCertificateModal';
 import { sound } from '../lib/sound';
+import { useAuth } from '../context/AuthContext';
 
 export default function HomePage() {
+  const { user, syncStatsToCloud } = useAuth();
+
   // All levels list (starts with static levels, dynamically expandable when student plays more!)
   const [levelsList, setLevelsList] = useState<Level[]>(LEVELS);
   const [currentLevelId, setCurrentLevelId] = useState<string>(LEVELS[0].id);
@@ -54,14 +57,28 @@ export default function HomePage() {
     };
   });
 
-  // Save progress to localStorage whenever userStats change
+  // When user logs in, load user stats from DB
+  useEffect(() => {
+    if (user?.stats) {
+      setUserStats(user.stats);
+      if (user.grade === '1-2' || user.grade === '3-4') {
+        setSelectedGrade(user.grade);
+      }
+    }
+  }, [user]);
+
+  // Save progress to localStorage and cloud database whenever userStats change
   useEffect(() => {
     try {
       localStorage.setItem('kodlama_macerasi_stats', JSON.stringify(userStats));
     } catch {
       // ignore
     }
-  }, [userStats]);
+    if (user) {
+      syncStatsToCloud(userStats);
+    }
+  }, [userStats, user, syncStatsToCloud]);
+
 
   // Sound toggle handler
   const handleToggleSound = () => {
