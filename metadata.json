@@ -1,0 +1,6 @@
+{
+  "name": "Kodlama Macerası: İlkokul Algoritma Atölyesi",
+  "description": "İlkokul öğrencileri için renkli, eğlenceli ve etkileşimli algoritma, sıralama, döngü ve koşul öğrenme platformu. Adım adım kontrol ve karar analizi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
