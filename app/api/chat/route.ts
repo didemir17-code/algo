@@ -72,12 +72,14 @@ export async function POST(req: NextRequest) {
       ];
     }
 
-    const preferredModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const preferredModel = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
     const candidateModels = [
       preferredModel,
+      'gemini-3.6-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-pro-preview',
       'gemini-2.5-flash',
       'gemini-2.5-flash-lite',
-      'gemini-2.5-pro',
     ].filter((v, i, a) => a.indexOf(v) === i);
 
     let replyText = '';
